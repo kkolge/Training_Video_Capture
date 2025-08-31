@@ -58,6 +58,41 @@
 
     License: MIT License
 
+# Getting Started with Git
+
+To get a local copy of this project, you will need to clone the repository. If you don't have Git installed, please visit the official Git website for installation instructions.
+
+Clone the repository: Open your terminal or command prompt and run the following command. This will download the entire project to your local machine.
+    
+
+git clone https://github.com/kkolge/Training_Video_Capture.git
+
+
+Navigate to the project directory:
+
+cd Training_Video_Capture 
+
+Set up the virtual environment: This is a crucial step to manage project dependencies.
+
+bash
+python3 -m venv venv
+
+Activate the virtual environment:
+
+On macOS and Linux:
+bash
+source venv/bin/activate
+
+On Windows:
+powershell
+    .\venv\Scripts\activate
+
+Install dependencies: Once the virtual environment is active, install the required libraries.
+
+pip install -r requirements.txt
+
+
+
 # Development Plan
 
 ## Step 1: Planning and Setup
