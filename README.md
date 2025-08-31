@@ -139,3 +139,38 @@ MIT License
 
 Ketan Kolge  
 ketan.k@panacheiot.com
+
+# TO-DO
+
+
+1. Refactor the Code in Relevant Classes and Files
+
+To make the code more organized, maintainable, and readable, you should move related functionalities into separate files and classes.
+
+    Create a gui.py file: Move all the Tkinter UI creation methods and layout logic into this new file. The App class will primarily handle the application's state and logic, while the gui.py file will contain methods for building the visual components.
+
+    Create a video_handler.py file: All methods related to video processing, such as camera capture (start_camera, update_video_feed), recording (start_recording), and playback (start_playback), should be moved here. This file will be responsible for all interactions with OpenCV and video files.
+
+    Create a config_manager.py file: Move the load_settings and save_settings methods into this file. This will centralize all configuration-related logic, making it easier to manage application settings.
+
+    Update main.py: After refactoring, main.py will become the main entry point of your application. It will import classes and functions from the other files and orchestrate the program's flow. It will be much cleaner and more concise.
+
+2. Add Comments
+
+Adding comments will make your code easier to understand for yourself and your team. Focus on explaining the "why" behind your code, not just the "what."
+
+    Explain complex logic: Add comments to any sections that are not immediately obvious, such as the dynamic path handling for PyInstaller or the aspect ratio calculations in the video handler.
+
+    Document functions and classes: Use docstrings for all major functions and classes. These should briefly describe what the function does, its parameters, and what it returns.
+
+    Clarify variable usage: Add brief comments to clarify the purpose of key variables, especially those that manage state, like is_recording or video_writer.
+
+3. Generate Documentation
+
+You can use an automatic documentation generator to create professional documentation from your code comments and docstrings. This is a great way to provide a clear reference for your project.
+
+    Install a documentation tool: Sphinx is a popular and powerful tool for Python documentation.
+
+    Write docstrings: Make sure your code is well-commented with docstrings that follow a standard format (e.g., Google Style, NumPy Style).
+
+    Run the documentation generator: Once your docstrings are in place, you can run the tool to generate HTML or PDF documentation.
