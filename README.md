@@ -1,10 +1,10 @@
 # Video Capture Tool for AI Model Training
 
-A simple desktop application developed for Panache IoT, a division of Panache DigiLife LTD, to capture and manage video footage for training AI models.
+    A simple desktop application developed for Panache IoT, a division of Panache DigiLife LTD, to capture and manage video footage for training AI models.
 
 # Project Overview
 
-    This application provides a user-friendly graphical interface (GUI) to configure, record, and manage video streams from various camera sources. The primary goal is to provide a stable tool for capturing high-quality video data for AI model development.
+    This application provides a user-friendly graphical interface (GUI) to configure, record, and manage video streams from various camera sources, including USB, IP, and stream URLs. The primary goal is to provide a stable and intuitive tool for capturing high-quality video data for AI model development.
 
 # Features
 
@@ -12,13 +12,15 @@ A simple desktop application developed for Panache IoT, a division of Panache Di
 
     Input fields for camera source (USB port, IP address, or stream URL).
 
-    A "Test Connection" button with a detailed error log for troubleshooting.
+    A "Test Connection" button with a detailed status and error log for troubleshooting.
 
-    Configuration for output directory to save videos.
+    Persistent configuration for output directory to save videos.
 
     Automatic filename generation with user-defined labels, converted to camelCase, and appended with a timestamp.
 
-## Recording & Playback:
+## Recording & Live View:
+
+    **Stable and responsive live video feed** with dynamic aspect ratio handling.
 
     Start/Stop buttons for both camera feed and video recording.
 
@@ -26,19 +28,25 @@ A simple desktop application developed for Panache IoT, a division of Panache Di
 
 ## Video Management:
 
-    Buttons for playing back and deleting saved videos.
+    A "Browse" button to select and load previously saved videos for review.
+
+    Play/Pause functionality for video playback.
 
     Display of current time and total duration during playback.
 
+    A "Delete Video" button to remove the currently loaded file.
+
 ## User Experience (UX):
 
-    Intuitive and easy-to-use interface.
+    Intuitive and easy-to-use interface with a two-panel layout emphasizing the live video feed.
 
-    Background processing for I/O operations to prevent the application from hanging.
+    Non-blocking I/O operations for camera capture and video playback, handled by a responsive self.after() loop to prevent the application from freezing.
+
+    Robust error handling with user-friendly pop-up messages.
 
 ## Persistence:
 
-    Save application settings (camera source, output directory) to a configuration file for future use.
+    Application settings (camera source, output directory) are automatically saved to and loaded from an external config.ini file.
 
 ## About:
 
@@ -54,71 +62,39 @@ A simple desktop application developed for Panache IoT, a division of Panache Di
 
 ## Step 1: Planning and Setup
 
-    Create a README.md file: This document will serve as our project plan.
+The project was initiated by creating a README.md file, setting up a Python virtual environment, and installing core dependencies: opencv-python, pillow, and tkinter. The basic file structure was established with the main script in a src directory and the configuration file in a separate config directory.
 
-    Set up a virtual environment: Create and activate a new Python virtual environment to manage dependencies.
+## Step 2: UI Development & Refinement
 
-    Install necessary libraries: Install opencv-python for video capture and playback, and a GUI library like Tkinter (which is a standard Python library) for the user interface. We'll also use Pillow for image handling in the UI if needed.
+The user interface was built using Tkinter's grid and pack layout managers. The initial design was refined through an iterative process to improve user experience, including:
 
-    Create the basic file structure: Set up the main Python script and a directory for the configuration file.
+    Adjusting the grid weights to prioritize the video frame.
 
-## Step 2: Building the UI (User Interface)
+    Reorganizing widgets for a cleaner, more intuitive layout.
 
-    Design the main window: Lay out the different sections as requested (Setup, View/Record, Review).
+    Implementing dynamic aspect ratio handling to prevent video feed distortion, ensuring the full camera frame is always visible.
 
-    Add widgets: Create input fields, buttons, and labels as per the feature list.
+## Step 3: Core Functionality
 
-    Implement callbacks: Attach functions to the buttons to handle user interactions (e.g., on_test_connection_click, on_start_record_click).
+    Configuration Management: Functions were created to load and save application settings from the config.ini file, ensuring settings persist between sessions.
 
-## Step 3: Implementing Core Functionality
+    Camera Handling: The start_camera method was implemented to connect to a camera using cv2.VideoCapture. The live video feed is handled by a responsive self.after() loop, which prevents the GUI from freezing.
 
-### Configuration Management:
+    Video Recording: A cv2.VideoWriter object was used to save frames to a file. A timer was added to display the recording duration in real-time.
 
-    Create functions to load settings from a config file (e.g., config.ini).
+## Step 4: Video Management and Playback
 
-    Create functions to save settings when the user changes them.
+    Playback: Video playback was implemented using a separate self.after() loop, similar to the live camera feed. This approach ensured smooth playback without introducing a new thread, thereby preventing common threading-related issues.
 
-### Camera Handling:
+    Deletion: A function was added to safely delete a video file from the system after a user confirmation.
 
-    Implement the logic to connect to a camera using OpenCV's cv2.VideoCapture.
+## Step 5: Final Touches & Deployment
 
-    Create a separate thread for continuous frame capture to avoid freezing the GUI.
+    Error Handling: Robust error handling was added for camera connections, file operations, and invalid inputs.
 
-### Video Recording:
+    Graceful Shutdown: The application was configured to gracefully handle keyboard interrupts (Ctrl+C), ensuring all camera resources are released on exit.
 
-    Use OpenCV's cv2.VideoWriter to save the captured frames to a file.
-
-    Implement the filename logic to handle camelCase conversion and add timestamps.
-
-### Threading:
-
-    Utilize Python's threading module to perform I/O operations (camera capture, recording, file saving) in the background. This is crucial to keep the UI responsive.
-
-## Step 4: Adding Video Management
-
-### Playback:
-
-    Use cv2.VideoCapture to read and display a saved video file.
-
-    Update a label to show the current playback time and total duration.
-
-### Deletion:
-
-    Implement a button to delete a selected video file from the output directory.
-
-## Step 5: Final Touches
-
-### Error Handling:
-
-    Add robust error handling for camera connections, file operations, and invalid inputs.
-
-    Implement the "Details" button to show a detailed error log.
-
-### Refinement:
-
-        Clean up the code, add comments, and ensure all features work as intended.
-
-        Add the MIT License to the project.
+    Application Packaging: The final application was packaged into a single executable file using PyInstaller. This process required explicitly including hidden dependencies and configuring the build to keep the config.ini file external for user-defined settings.
 
 # License
 

@@ -8,10 +8,19 @@ from PIL import Image, ImageTk
 from datetime import datetime
 import time
 import signal
+import sys
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+
+        # Get the base directory of the running script
+        if getattr(sys, 'frozen', False):
+            # We are running in a bundled executable
+            self.base_dir = os.path.dirname(sys.executable)
+        else:
+            # We are running in a regular Python environment
+            self.base_dir = os.path.dirname(os.path.abspath(__file__))
 
         # Configure the main window
         self.title("Video Capture Tool for AI Model Training")
@@ -64,7 +73,7 @@ class App(tk.Tk):
         self.delete_video_button.config(command=self.delete_video)
 
         # Manage settings
-        self.settings_file = os.path.join("config", "config.ini")
+        self.settings_file = os.path.join(self.base_dir, "..", "config", "config.ini")
         self.load_settings()
 
         # Bind the window closing event to save settings
