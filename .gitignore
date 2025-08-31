@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+
+# MediaPipe Models
+#model/
+#*.task
+
+# Data and Recordings
+data/
+*.json
+*.mp4
+*.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Test files
+test_images/
