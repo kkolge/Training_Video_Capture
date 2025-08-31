@@ -7,6 +7,7 @@ import cv2
 from PIL import Image, ImageTk
 from datetime import datetime
 import time
+import signal
 
 class App(tk.Tk):
     def __init__(self):
@@ -43,6 +44,13 @@ class App(tk.Tk):
         self.recording_timer = None
         self.start_time = 0 
 
+        # Playback variables
+        self.is_playing = False # Add this
+        self.playback_cap = None # Add this
+        self.playback_thread = None # Add this
+        self.playback_thread_running = False # Add this
+        self.current_video_path = None # Add this
+
         # UI components
         self.create_left_panel()
         self.create_right_panel()
@@ -51,6 +59,9 @@ class App(tk.Tk):
         self.test_connection_button.config(command=self.test_camera_connection)
         self.start_stop_camera_button.config(command=self.toggle_camera)
         self.record_button.config(command=self.toggle_recording)
+        self.open_video_button.config(command=self.browse_and_open_video)
+        self.playback_button.config(command=self.toggle_playback)
+        self.delete_video_button.config(command=self.delete_video)
 
         # Manage settings
         self.settings_file = os.path.join("config", "config.ini")
@@ -63,6 +74,9 @@ class App(tk.Tk):
                 font=("Arial", 8)).grid(row=2, column=1, sticky=tk.SE, pady=(5, 0), padx=5)
         ttk.Label(self.main_frame, text="© 2024 Panache IoT (a division of Panache DigiLife LTD)", 
                 font=("Arial", 8)).grid(row=3, column=1, sticky=tk.SE, padx=5)
+        
+        # Register signal handler for Ctrl-C
+        signal.signal(signal.SIGINT, self.handle_signal)
 
     def load_settings(self):
         """Loads settings from the config file and populates the UI."""
@@ -107,6 +121,8 @@ class App(tk.Tk):
     def on_close(self):
         """Saves settings and then closes the application."""
         self.save_settings()
+        self.stop_camera()
+        self.stop_playback()
         self.destroy()
 
     def create_left_panel(self):
@@ -122,45 +138,6 @@ class App(tk.Tk):
         # Configure the left panel to expand
         left_panel.columnconfigure(0, weight=1)
 
-    # def create_right_panel(self):
-    #     """Creates the right-hand panel for the video feed and recording controls."""
-    #     right_panel = ttk.Frame(self.main_frame, padding="10")
-    #     right_panel.grid(row=0, column=1, sticky=(tk.N, tk.S, tk.E, tk.W))
-    #     right_panel.columnconfigure(0, weight=1)
-    #     right_panel.rowconfigure(0, weight=1)
-
-    #     # Section View/Record
-    #     view_record_frame = ttk.LabelFrame(right_panel, text="2. Live View and Recording", padding="10")
-    #     view_record_frame.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W))
-    #     view_record_frame.columnconfigure(0, weight=1)
-    #     view_record_frame.rowconfigure(0, weight=1)
-
-    #     # Create a container frame for the video with a fixed size
-    #     video_container = ttk.Frame(view_record_frame, width=640, height=480)
-    #     video_container.grid(row=0, column=0, sticky=(tk.N, tk.S, tk.E, tk.W), padx=5, pady=5)
-
-    #     # Prevent the container from shrinking below its specified size
-    #     video_container.grid_propagate(False)
-
-    #     # Placeholder for the video feed inside the container
-    #     self.video_label = ttk.Label(video_container, text="Live Video Feed", relief="solid", background="black", foreground="white", anchor="center")
-    #     self.video_label.pack(fill=tk.BOTH, expand=True)
-
-    #     # Controls
-    #     control_frame = ttk.Frame(view_record_frame)
-    #     control_frame.grid(row=1, column=0, sticky=(tk.W, tk.E), pady=5)
-    #     control_frame.columnconfigure(0, weight=1)
-    #     control_frame.columnconfigure(1, weight=1)
-    #     control_frame.columnconfigure(2, weight=1)
-
-    #     self.start_stop_camera_button = ttk.Button(control_frame, text="Start Camera")
-    #     self.start_stop_camera_button.grid(row=0, column=0, padx=5, sticky=tk.W)
-
-    #     self.record_button = ttk.Button(control_frame, text="Start Recording")
-    #     self.record_button.grid(row=0, column=1, padx=5, sticky=tk.W)
-
-    #     self.record_duration_label = ttk.Label(control_frame, text="Duration: 00:00:00")
-    #     self.record_duration_label.grid(row=0, column=2, padx=5, sticky=tk.E)
     def create_right_panel(self):
         """Creates the right-hand panel for the video feed and recording controls."""
         right_panel = ttk.Frame(self.main_frame, padding="10")
@@ -347,43 +324,6 @@ class App(tk.Tk):
         if self.frame_update_id:
             self.after_cancel(self.frame_update_id)
             self.frame_update_id = None
-        
-    # def update_video_feed(self):
-    #     """Reads frames from the camera, scales them to fit the display, and updates the label."""
-    #     if self.is_camera_on and self.camera:
-    #         ret, frame = self.camera.read()
-    #         if ret:
-    #             # Wait until the widget has been drawn and has a valid size
-    #             if self.video_label.winfo_width() > 1 and self.video_label.winfo_height() > 1:
-    #                 container_width = self.video_label.winfo_width()
-    #                 container_height = self.video_label.winfo_height()
-
-    #                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    #                 frame_height, frame_width, _ = rgb_frame.shape
-
-    #                 # Calculate the scaling factor to fit the entire frame (letterboxing)
-    #                 scale_w = container_width / frame_width
-    #                 scale_h = container_height / frame_height
-
-    #                 print(f"Frame w/h: {frame_width}/{frame_height}, Container w/h: {container_width}/{container_height}, Scales: {scale_w:.2f}/{scale_h:.2f}")
-
-    #                 scale = min(scale_w, scale_h)
-
-    #                 new_w = int(frame_width * scale)
-    #                 new_h = int(frame_height * scale)
-
-    #                 resized_frame = cv2.resize(rgb_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
-
-    #                 bg = Image.new('RGB', (container_width, container_height), 'black')
-    #                 x_offset = (container_width - new_w) // 2
-    #                 y_offset = (container_height - new_h) // 2
-    #                 bg.paste(Image.fromarray(resized_frame), (x_offset, y_offset))
-
-    #                 imgtk = ImageTk.PhotoImage(image=bg)
-    #                 self.video_label.imgtk = imgtk
-    #                 self.video_label.config(image=imgtk)
-
-    #         self.frame_update_id = self.after(10, self.update_video_feed)
 
     def update_video_feed(self):
         """Reads frames from the camera, scales them to fit the display, and updates the label."""
@@ -500,6 +440,171 @@ class App(tk.Tk):
             hours, minutes = divmod(minutes, 60)
             self.record_duration_label.config(text=f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d}")
             self.recording_timer = self.after(1000, self.update_duration_label)
+
+    # Playback and delete related methods
+    def browse_and_open_video(self):
+        """Opens a file dialog for the user to select a video file."""
+        # Stop any active camera feed or playback before opening a new video
+        self.stop_camera()
+        self.stop_playback()
+
+        file_path = filedialog.askopenfilename(
+            initialdir=self.output_dir_entry.get(),
+            title="Select a video file",
+            filetypes=(("AVI files", "*.avi"), ("All files", "*.*"))
+        )
+        if file_path:
+            self.current_video_path = file_path
+            self.playback_button.config(text="Play")
+            self.playback_duration_label.config(text="Time: 00:00:00 / 00:00:00")
+
+            # Display a placeholder image for the selected video
+            try:
+                temp_cap = cv2.VideoCapture(file_path)
+                ret, frame = temp_cap.read()
+                temp_cap.release()
+
+                if ret:
+                    self.display_frame(frame)
+
+            except Exception as e:
+                messagebox.showerror("File Error", f"Could not load video file: {e}")
+                self.video_label.config(text="Live Video Feed")
+
+    def toggle_playback(self):
+        """Starts or pauses the video playback."""
+        if not self.current_video_path:
+            messagebox.showerror("Playback Error", "Please open a video file first.")
+            return
+
+        if self.is_playing:
+            self.stop_playback()
+        else:
+            self.start_playback()
+
+    def start_playback(self):
+        """Starts the video playback."""
+        self.playback_cap = cv2.VideoCapture(self.current_video_path)
+        if not self.playback_cap.isOpened():
+            messagebox.showerror("Playback Error", "Could not open video file.")
+            self.stop_playback()
+            return
+
+        self.is_playing = True
+        self.playback_button.config(text="Pause")
+
+        total_frames = int(self.playback_cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self.fps = self.playback_cap.get(cv2.CAP_PROP_FPS)
+        self.total_duration_seconds = int(total_frames / self.fps)
+        
+        self.update_playback_feed()
+
+    def update_playback_feed(self):
+        """The loop that reads frames from the video and updates the UI."""
+        if self.is_playing and self.playback_cap.isOpened():
+            ret, frame = self.playback_cap.read()
+            if not ret:
+                self.stop_playback()
+                return
+
+            self.display_frame(frame)
+
+            # Update playback duration label
+            current_frame = self.playback_cap.get(cv2.CAP_PROP_POS_FRAMES)
+            current_time_seconds = int(current_frame / self.fps)
+            
+            minutes, seconds = divmod(current_time_seconds, 60)
+            hours, minutes = divmod(minutes, 60)
+            
+            total_minutes, total_seconds = divmod(self.total_duration_seconds, 60)
+            total_hours, total_minutes = divmod(total_minutes, 60)
+
+            self.playback_duration_label.config(text=f"Time: {hours:02d}:{minutes:02d}:{seconds:02d} / {total_hours:02d}:{total_minutes:02d}:{total_seconds:02d}")
+
+            # Schedule the next frame update
+            self.after(int(1000 / self.fps), self.update_playback_feed)
+
+    def playback_loop(self):
+        """The loop that reads frames from the video and updates the UI."""
+        while self.playback_thread_running and self.playback_cap.isOpened():
+            ret, frame = self.playback_cap.read()
+            if not ret:
+                # End of video file, set the flag and break
+                self.playback_thread_running = False
+                self.after(10, self.stop_playback) # Schedule the cleanup on the main thread
+                break
+
+            self.display_frame(frame)
+
+            # Update playback duration label
+            current_frame = self.playback_cap.get(cv2.CAP_PROP_POS_FRAMES)
+            fps = self.playback_cap.get(cv2.CAP_PROP_FPS)
+            current_time_seconds = int(current_frame / fps)
+
+            minutes, seconds = divmod(current_time_seconds, 60)
+            hours, minutes = divmod(minutes, 60)
+
+            total_minutes, total_seconds = divmod(self.total_duration_seconds, 60)
+            total_hours, total_minutes = divmod(total_minutes, 60)
+
+            self.playback_duration_label.config(text=f"Time: {hours:02d}:{minutes:02d}:{seconds:02d} / {total_hours:02d}:{total_minutes:02d}:{total_seconds:02d}")
+
+            # Wait for a short duration to control playback speed
+            time.sleep(1 / fps)
+
+    def stop_playback(self):
+        """Stops the video playback and releases the video capture object."""
+        self.is_playing = False
+        self.playback_button.config(text="Play")
+
+        if self.playback_cap:
+            self.playback_cap.release()
+            self.playback_cap = None
+
+    def delete_video(self):
+        """Deletes the currently open video file."""
+        if not self.current_video_path:
+            messagebox.showerror("Delete Error", "No video file is open.")
+            return
+
+        if messagebox.askyesno("Delete Video", f"Are you sure you want to delete {os.path.basename(self.current_video_path)}?"):
+            self.stop_playback()
+            os.remove(self.current_video_path)
+            self.current_video_path = None
+            self.video_label.config(image='', text="Live Video Feed")
+            self.playback_duration_label.config(text="Time: 00:00:00 / 00:00:00")
+            messagebox.showinfo("Success", "Video file deleted.")
+
+    def display_frame(self, frame):
+        """Helper method to display a single frame in the video label."""
+        label_width = self.video_label.winfo_width()
+        label_height = self.video_label.winfo_height()
+
+        if label_width > 1 and label_height > 1:
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame_height, frame_width, _ = rgb_frame.shape
+
+            scale_w = label_width / frame_width
+            scale_h = label_height / frame_height
+            scale = min(scale_w, scale_h)
+
+            new_w = int(frame_width * scale)
+            new_h = int(frame_height * scale)
+            resized_frame = cv2.resize(rgb_frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+            bg = Image.new('RGB', (label_width, label_height), 'black')
+            x_offset = (label_width - new_w) // 2
+            y_offset = (label_height - new_h) // 2
+            bg.paste(Image.fromarray(resized_frame), (x_offset, y_offset))
+
+            imgtk = ImageTk.PhotoImage(image=bg)
+            self.video_label.imgtk = imgtk
+            self.video_label.config(image=imgtk)
+
+    def handle_signal(self, signum, frame):
+        """Handle signals like Ctrl-C to ensure a clean shutdown."""
+        print("\nCtrl-C detected. Shutting down gracefully...")
+        self.on_close()
 
 if __name__ == "__main__":
     app = App()
