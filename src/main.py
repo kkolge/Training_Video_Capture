@@ -5,6 +5,8 @@ import os
 import configparser
 import cv2
 from PIL import Image, ImageTk
+from datetime import datetime
+import time
 
 class App(tk.Tk):
     def __init__(self):
@@ -36,6 +38,10 @@ class App(tk.Tk):
         self.camera = None
         self.is_camera_on = False
         self.frame_update_id = None
+        self.is_recording = False 
+        self.video_writer = None
+        self.recording_timer = None
+        self.start_time = 0 
 
         # UI components
         self.create_left_panel()
@@ -44,6 +50,7 @@ class App(tk.Tk):
         # Callbacks
         self.test_connection_button.config(command=self.test_camera_connection)
         self.start_stop_camera_button.config(command=self.toggle_camera)
+        self.record_button.config(command=self.toggle_recording)
 
         # Manage settings
         self.settings_file = os.path.join("config", "config.ini")
@@ -383,6 +390,9 @@ class App(tk.Tk):
         if self.is_camera_on and self.camera:
             ret, frame = self.camera.read()
             if ret:
+                if self.is_recording and self.video_writer:
+                    self.video_writer.write(frame)
+
                 label_width = self.video_label.winfo_width()
                 label_height = self.video_label.winfo_height()
 
@@ -415,6 +425,81 @@ class App(tk.Tk):
         if directory:
             self.output_dir_entry.delete(0, tk.END)
             self.output_dir_entry.insert(0, directory)
+
+    # Recording related methods
+    def toggle_recording(self):
+        """Starts or stops the video recording."""
+        if not self.is_camera_on:
+            messagebox.showerror("Recording Error", "Please start the camera before recording.")
+            return
+
+        if self.is_recording:
+            # Stop recording
+            self.stop_recording()
+        else:
+            # Start recording
+            self.start_recording()
+
+    def start_recording(self):
+        """Initializes the video writer and starts the recording."""
+        # Check for required fields
+        output_dir = self.output_dir_entry.get()
+        video_name = self.video_name_entry.get()
+
+        if not output_dir or not video_name:
+            messagebox.showerror("Recording Error", "Please specify an output directory and video name.")
+            return
+
+        # Ensure the output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Get frame properties from the camera
+        width = int(self.camera.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(self.camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        fps = self.camera.get(cv2.CAP_PROP_FPS)
+        if fps == 0:
+            fps = 30 # Default to 30 FPS if camera returns 0
+
+        # Create a unique filename with a timestamp and camelCase format
+        current_time = datetime.now().strftime("%Y%m%d%H%M%S")
+        final_filename = f"{video_name.replace(' ', '')}{current_time}.avi"
+        output_path = os.path.join(output_dir, final_filename)
+
+        # Define the codec and create a VideoWriter object
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        self.video_writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+        self.is_recording = True
+        self.record_button.config(text="Stop Recording")
+
+        # Start the timer for recording duration
+        self.start_time = time.time()
+        self.update_duration_label()
+
+    def stop_recording(self):
+        """Releases the video writer and stops the timer."""
+        if self.video_writer:
+            self.video_writer.release()
+            self.video_writer = None
+
+        self.is_recording = False
+        self.record_button.config(text="Start Recording")
+
+        if self.recording_timer:
+            self.after_cancel(self.recording_timer)
+            self.recording_timer = None
+
+        self.record_duration_label.config(text="Duration: 00:00:00")
+        messagebox.showinfo("Recording Finished", "Video saved successfully!")
+
+    def update_duration_label(self):
+        """Updates the duration label every second."""
+        if self.is_recording:
+            elapsed_time = int(time.time() - self.start_time)
+            minutes, seconds = divmod(elapsed_time, 60)
+            hours, minutes = divmod(minutes, 60)
+            self.record_duration_label.config(text=f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d}")
+            self.recording_timer = self.after(1000, self.update_duration_label)
 
 if __name__ == "__main__":
     app = App()
